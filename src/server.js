@@ -1,9 +1,12 @@
 import express from "express";
+import { runMigrations } from "./config/db.js";
+
+runMigrations();
 
 const app = express();
 
 app.get("/", (req, res) => {
-    res.send("PassPort Inc Auth API funcionando ✅");
+    res.send("PassPort Inc Auth API funcionando ✅ (con DB)");
 });
 
 app.listen(3000, () => {
