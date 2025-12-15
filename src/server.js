@@ -4,6 +4,7 @@ import { authRoutes } from "./routes/auth.routes.js";
 import cookieParser from "cookie-parser";
 import { sessionMiddleware } from "./config/session.js";
 import { meRoutes } from "./routes/me.routes.js";
+import { adminRoutes } from "./routes/admin.routes.js";
 
 runMigrations();
 
@@ -21,6 +22,7 @@ app.use(sessionMiddleware());
 
 app.use("/me", meRoutes);
 app.use("/auth", authRoutes);
+app.use("/admin", adminRoutes);
 
 app.listen(3000, () => {
     console.log("Servidor en http://localhost:3000");

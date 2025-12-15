@@ -7,7 +7,7 @@ import { signJwt } from "../utils/jwt.js";
  * POST /auth/register
  */
 export async function register(req, res) {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Validación mínima
     if (!email || !password) {
@@ -19,16 +19,18 @@ export async function register(req, res) {
         const password_hash = await hashPassword(password);
 
         // Guardar usuario en la DB
+        const safeRole = role === "ADMIN" ? "ADMIN" : "USER";
+
         const stmt = db.prepare(
             "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)"
         );
 
-        const result = stmt.run(email, password_hash, "USER");
+        const result = stmt.run(email, password_hash, safeRole);
 
         return res.status(201).json({
             id: result.lastInsertRowid,
             email,
-            role: "USER",
+            role: safeRole,
         });
     } catch (error) {
         // Email duplicado
