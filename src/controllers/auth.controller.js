@@ -1,5 +1,6 @@
 import { db } from "../config/db.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
+import { signJwt } from "../utils/jwt.js";
 
 /**
  * REGISTRO DE USUARIO
@@ -79,6 +80,17 @@ export async function login(req, res) {
             mode: "session",
             user: req.session.user,
         });
+    }
+
+    // 👉 LOGIN CON JWT
+    if (mode === "jwt") {
+        const token = signJwt({
+            sub: String(user.id),
+            role: user.role,
+            email: user.email
+        });
+
+        return res.json({ ok: true, mode: "jwt", token });
     }
 
     // 👉 LOGIN SIMPLE (sin sesión todavía)
