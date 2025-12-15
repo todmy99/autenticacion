@@ -1,57 +1,107 @@
 import { db } from "../config/db.js";
-import { hashPassword } from "../utils/password.js";
+import { hashPassword, verifyPassword } from "../utils/password.js";
 
+/**
+ * REGISTRO DE USUARIO
+ * POST /auth/register
+ */
 export async function register(req, res) {
     const { email, password } = req.body;
 
-    // 1) Validación mínima (simple)
+    // Validación mínima
     if (!email || !password) {
         return res.status(400).json({ error: "email and password are required" });
     }
 
-    // 2) Hashear password
-    const password_hash = await hashPassword(password);
-
-    // 3) Insertar en SQLite
     try {
+        // Hashear contraseña
+        const password_hash = await hashPassword(password);
+
+        // Guardar usuario en la DB
         const stmt = db.prepare(
-        "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)"
+            "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)"
         );
-        const info = stmt.run(email, password_hash, "USER");
+
+        const result = stmt.run(email, password_hash, "USER");
 
         return res.status(201).json({
-        id: info.lastInsertRowid,
-        email,
-        role: "USER",
+            id: result.lastInsertRowid,
+            email,
+            role: "USER",
         });
-    } catch (err) {
-        // email unique => si ya existe, falla
+    } catch (error) {
+        // Email duplicado
         return res.status(409).json({ error: "email already exists" });
     }
 }
 
-import { verifyPassword } from "../utils/password.js";
-
-// ...
-
+/**
+ * LOGIN DE USUARIO
+ * POST /auth/login
+ * mode: "session" | undefined
+ */
 export async function login(req, res) {
-    const { email, password } = req.body;
+    const { email, password, mode } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: "email and password are required" });
     }
 
-    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+    // Buscar usuario
+    const user = db
+        .prepare("SELECT * FROM users WHERE email = ?")
+        .get(email);
 
     if (!user) {
         return res.status(401).json({ error: "invalid credentials" });
     }
 
-    const ok = await verifyPassword(password, user.password_hash);
-    if (!ok) {
+    // Verificar password
+    const validPassword = await verifyPassword(
+        password,
+        user.password_hash
+    );
+
+    if (!validPassword) {
         return res.status(401).json({ error: "invalid credentials" });
     }
 
-    // por ahora solo confirmamos login correcto
-    return res.json({ ok: true, id: user.id, email: user.email, role: user.role });
+    // 👉 LOGIN CON SESIÓN
+    if (mode === "session") {
+        req.session.user = {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        };
+
+        return res.json({
+            ok: true,
+            mode: "session",
+            user: req.session.user,
+        });
+    }
+
+    // 👉 LOGIN SIMPLE (sin sesión todavía)
+    return res.json({
+        ok: true,
+        mode: "none",
+        id: user.id,
+        email: user.email,
+        role: user.role,
+    });
+}
+
+/**
+ * LOGOUT (sesión)
+ * POST /auth/logout
+ */
+export function logout(req, res) {
+    if (!req.session) {
+        return res.json({ ok: true });
+    }
+
+    req.session.destroy(() => {
+        res.clearCookie("connect.sid");
+        res.json({ ok: true });
+    });
 }
