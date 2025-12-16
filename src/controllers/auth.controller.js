@@ -2,6 +2,14 @@ import { db } from "../config/db.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { signJwt } from "../utils/jwt.js";
 
+const MAX_FAILS = 5;
+const LOCK_MINUTES = 10;
+
+function now() {
+    return Date.now();
+}
+
+
 /**
  * REGISTRO DE USUARIO
  * POST /auth/register
@@ -59,6 +67,11 @@ export async function login(req, res) {
         return res.status(401).json({ error: "invalid credentials" });
     }
 
+    if (user.locked_until && user.locked_until > now()) {
+        return res.status(423).json({ error: "Account locked. Try later." });
+    }
+
+
     // Verificar password
     const validPassword = await verifyPassword(
         password,
@@ -66,8 +79,29 @@ export async function login(req, res) {
     );
 
     if (!validPassword) {
+        const fails = user.failed_attempts + 1;
+
+        if (fails >= MAX_FAILS) {
+            const lockedUntil = now() + LOCK_MINUTES * 60 * 1000;
+
+            db.prepare(
+                "UPDATE users SET failed_attempts = 0, locked_until = ? WHERE id = ?"
+            ).run(lockedUntil, user.id);
+
+            return res.status(423).json({ error: "Account locked. Try later." });
+        }
+
+        db.prepare(
+            "UPDATE users SET failed_attempts = ? WHERE id = ?"
+        ).run(fails, user.id);
+
         return res.status(401).json({ error: "invalid credentials" });
     }
+
+    db.prepare(
+        "UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?"
+    ).run(user.id);
+
 
     // 👉 LOGIN CON SESIÓN
     if (mode === "session") {
