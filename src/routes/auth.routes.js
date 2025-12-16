@@ -5,20 +5,20 @@ import { loginRateLimit } from "../middlewares/loginRateLimit.js";
 
 export const authRoutes = Router();
 
-// Registro: lo dejamos SIN CSRF (simple)
+// Registro: simple (sin CSRF)
 authRoutes.post("/register", register);
 
-// Login JWT: SIN CSRF (porque va por Authorization)
+// Login JWT: sin CSRF
 authRoutes.post("/login-jwt", loginRateLimit, (req, res, next) => {
     req.body.mode = "jwt";
     return login(req, res, next);
 });
 
-// Login sesión: CON CSRF (obligatorio y correcto)
+// ✅ Login sesión: con CSRF
 authRoutes.post("/login-session", csrfProtection, loginRateLimit, (req, res, next) => {
     req.body.mode = "session";
     return login(req, res, next);
 });
 
-// Logout sesión: CON CSRF
+// ✅ Logout sesión: con CSRF
 authRoutes.post("/logout", csrfProtection, logout);

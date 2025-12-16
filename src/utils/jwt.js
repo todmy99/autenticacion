@@ -1,11 +1,10 @@
 import jwt from "jsonwebtoken";
-
-const JWT_SECRET = "supersecret_jwt_dev"; // luego lo pasamos a .env
+import { env } from "../config/env.js";
 
 export function signJwt(payload) {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: "2h" });
+    return jwt.sign(payload, env.JWT_SECRET, { expiresIn: "2h" });
 }
 
 export function verifyJwt(token) {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, env.JWT_SECRET);
 }

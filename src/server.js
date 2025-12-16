@@ -1,6 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import { env } from "./config/env.js";
 
 import { runMigrations } from "./config/db.js";
 import { sessionMiddleware } from "./config/session.js";
@@ -37,6 +38,6 @@ app.use("/auth", authRoutes);
 app.use("/me", meRoutes);
 app.use("/admin", adminRoutes);
 
-app.listen(3000, () => {
-    console.log("Servidor en http://localhost:3000");
+app.listen(env.PORT, () => {
+    console.log(`Servidor en http://localhost:${env.PORT}`);
 });
